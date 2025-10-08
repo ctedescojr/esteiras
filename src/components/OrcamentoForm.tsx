@@ -28,7 +28,7 @@ const Label = styled.label`
 const Input = styled.input`
   padding: 0.75rem;
   border: 1px solid ${({ theme }) => theme.toggleBorder};
-  background-color: ${({ theme }) => theme.body};
+  background-color: ${({ theme }) => theme.inputBackground};
   color: ${({ theme }) => theme.text};
   border-radius: 4px;
 `;
@@ -36,7 +36,7 @@ const Input = styled.input`
 const Select = styled.select`
   padding: 0.75rem;
   border: 1px solid ${({ theme }) => theme.toggleBorder};
-  background-color: ${({ theme }) => theme.body};
+  background-color: ${({ theme }) => theme.inputBackground};
   color: ${({ theme }) => theme.text};
   border-radius: 4px;
 `;

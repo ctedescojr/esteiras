@@ -17,6 +17,9 @@ const Label = styled.label`
 const Input = styled.input`
   width: 100%;
   padding: 0.5rem;
+  background-color: ${({ theme }) => theme.inputBackground};
+  color: ${({ theme }) => theme.text};
+  border: 1px solid ${({ theme }) => theme.toggleBorder};
 `;
 
 const Button = styled.button`

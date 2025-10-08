@@ -10,7 +10,7 @@ import styled from 'styled-components';
 
 const Nav = styled.nav`
   padding: 1rem 2rem;
-  background-color: ${({ theme }) => theme.body};
+  background-color: #0c144f;
   border-bottom: 1px solid ${({ theme }) => theme.toggleBorder};
   display: flex;
   justify-content: space-between;
@@ -18,7 +18,7 @@ const Nav = styled.nav`
 `;
 
 const NavLink = styled(Link)`
-  color: ${({ theme }) => theme.text};
+  color: #FFFFFF;
   text-decoration: none;
   margin: 0 1rem;
 `;

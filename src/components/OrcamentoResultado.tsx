@@ -17,8 +17,8 @@ const ResultadoContainer = styled.div`
 `;
 
 const Titulo = styled.h2`
-  color: ${({ theme }) => theme.primary};
-  border-bottom: 2px solid ${({ theme }) => theme.primary};
+  color: ${({ theme }) => theme.highlight};
+  border-bottom: 2px solid ${({ theme }) => theme.highlight};
   padding-bottom: 0.5rem;
   margin-bottom: 1.5rem;
 `;
@@ -37,7 +37,7 @@ const ItemLista = styled.div`
 const Total = styled(ItemLista)`
   font-weight: bold;
   font-size: 1.2rem;
-  color: ${({ theme }) => theme.primary};
+  color: ${({ theme }) => theme.highlight};
   margin-top: 1rem;
 `;
 

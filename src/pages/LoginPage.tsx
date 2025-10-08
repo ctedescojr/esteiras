@@ -31,7 +31,7 @@ const Input = styled.input`
   width: 100%;
   padding: 0.75rem;
   border: 1px solid ${({ theme }) => theme.toggleBorder};
-  background-color: ${({ theme }) => theme.body};
+  background-color: ${({ theme }) => theme.inputBackground};
   color: ${({ theme }) => theme.text};
   border-radius: 4px;
 `;

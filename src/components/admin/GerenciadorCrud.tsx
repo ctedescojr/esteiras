@@ -30,6 +30,9 @@ const Form = styled.form`
 
 const Input = styled.input`
   padding: 0.5rem;
+  background-color: ${({ theme }) => theme.inputBackground};
+  color: ${({ theme }) => theme.text};
+  border: 1px solid ${({ theme }) => theme.toggleBorder};
 `;
 
 interface Item {

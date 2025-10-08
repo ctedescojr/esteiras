@@ -7,5 +7,7 @@ declare module 'styled-components' {
     toggleBorder: string;
     background: string;
     primary: string;
+    highlight: string;
+    inputBackground: string;
   }
 }
