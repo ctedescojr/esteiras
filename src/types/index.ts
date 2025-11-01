@@ -10,13 +10,24 @@ export interface Opcional {
   preco: number;
 }
 
-export interface Orcamento {
+// Representa os dados que o usuário insere diretamente no formulário
+// Representa os dados que o usuário insere diretamente no formulário
+export interface OrcamentoInput {
   largura: number;
   comprimento: number;
   diametroCorreia: number;
-  perfilEstrutura: number;
   motorId: string;
-  opcionaisSelecionados: { [key: string]: boolean };
+  tipoApoio: 'pe' | 'rodizio';
+  // Apenas os itens que são verdadeiramente opcionais agora
+  opcionaisSelecionados: {
+    roleteInferior?: boolean;
+    pintura?: boolean;
+  };
+}
+
+// Representa o estado completo, incluindo valores calculados
+export interface Orcamento extends OrcamentoInput {
+  perfilEstrutura: number;
   horasProjeto: number;
   horasMontagem: number;
 }

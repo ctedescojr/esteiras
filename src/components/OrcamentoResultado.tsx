@@ -1,10 +1,10 @@
 import React from 'react';
 import styled from 'styled-components';
 import { Orcamento } from '../types';
-import { costs } from '../data/costs';
 
 interface Props {
   orcamento: Orcamento;
+  costs: any;
 }
 
 const ResultadoContainer = styled.div`
@@ -60,53 +60,151 @@ const Button = styled.button`
   }
 `;
 
-const OrcamentoResultado: React.FC<Props> = ({ orcamento }) => {
-  const calcularTotal = () => {
+const OrcamentoResultado: React.FC<Props> = ({ orcamento, costs }) => {
+  const calcularCustosDetalhados = () => {
     const {
       largura,
       comprimento,
       diametroCorreia,
       perfilEstrutura,
       motorId,
+      tipoApoio,
       opcionaisSelecionados,
       horasProjeto,
       horasMontagem,
     } = orcamento;
 
-    // Cálculos (convertendo mm para m onde necessário)
-    const comprimentoCorreia = ((comprimento / 1000) * 2) + (Math.PI * (diametroCorreia / 1000));
-    const custoCorreia = comprimentoCorreia * (largura / 1000) * costs.correiaPorMetro;
-    const custoChapa = (largura / 1000) * (comprimento / 1000) * costs.chapaPorM2;
+    const larguraM = largura / 1000;
+    const comprimentoM = comprimento / 1000;
+    const areaM2 = larguraM * comprimentoM;
+
+    // --- CUSTOS BÁSICOS ---
+    const comprimentoCorreia = (comprimentoM * 2) + (Math.PI * (diametroCorreia / 1000));
+    const custoCorreia = comprimentoCorreia * larguraM * costs.correiaPorMetro;
+    const custoChapa = areaM2 * costs.chapaPorM2;
     const custoEstrutura = perfilEstrutura * costs.perfilEstruturaPorMetro;
-    
-    const motorSelecionado = costs.motores.find(m => m.id === motorId);
+    const motorSelecionado = costs.motores.find((m: { id: string; preco: number }) => m.id === motorId);
     const custoMotor = motorSelecionado ? motorSelecionado.preco : 0;
 
-    const custoOpcionais = Object.keys(opcionaisSelecionados)
-      .filter(key => opcionaisSelecionados[key])
-      .reduce((total, key) => {
-        const opcional = costs.opcionais.find(o => o.id === key);
-        return total + (opcional ? opcional.preco : 0);
-      }, 0);
+    // Cálculo de Horas de Projeto e Montagem com base na área
+    let horasProjetoCalculadas = horasProjeto;
+    let horasMontagemCalculadas = horasMontagem;
 
-    const custoProjeto = horasProjeto * costs.projetoPorHora;
-    const custoMontagem = horasMontagem * costs.montagemPorHora;
+    if (areaM2 > 2) {
+      const metrosExcedentes = Math.ceil(areaM2 - 2);
+      const acrescimoPercentual = 0.05 * metrosExcedentes;
+      horasProjetoCalculadas += horasProjeto * acrescimoPercentual;
+      horasMontagemCalculadas += horasMontagem * acrescimoPercentual;
+    }
 
-    const subtotal = custoCorreia + custoChapa + custoEstrutura + custoMotor + custoOpcionais + custoProjeto + custoMontagem;
+    const custoProjeto = horasProjetoCalculadas * costs.projetoPorHora;
+    const custoMontagem = horasMontagemCalculadas * costs.montagemPorHora;
+
+    // --- OUTROS MATERIAIS (PADRÃO) ---
+    const outrosMateriais: { nome: string; detalhe: string; custo: number }[] = [];
+    
+    // Função auxiliar para calcular custo baseado em área
+    const calcularCustoPorArea = (nomeItem: string) => {
+      const item = costs.opcionais.find((o: { nome: string; preco: number }) => o.nome.toLowerCase().includes(nomeItem.toLowerCase()));
+      if (!item) return 0;
+      
+      let custo = item.preco;
+      let detalhe = `Valor base até 2m²: ${formatCurrency(custo)}`;
+      if (areaM2 > 2) {
+        const metrosExcedentes = Math.ceil(areaM2 - 2);
+        const acrescimo = item.preco * 0.20 * metrosExcedentes;
+        custo += acrescimo;
+        detalhe += ` + ${formatCurrency(acrescimo)} (${metrosExcedentes}m² excedente(s))`;
+      }
+      outrosMateriais.push({ nome: nomeItem, custo, detalhe });
+      return custo;
+    };
+
+    // Mancais: 4 unidades, preço unitário
+    const itemMancais = costs.opcionais.find((o: { nome: string; preco: number }) => o.nome === 'Mancais');
+    const custoMancais = itemMancais ? itemMancais.preco * 4 : 0;
+    if (itemMancais) {
+      outrosMateriais.push({ nome: 'Mancais', custo: custoMancais, detalhe: `4 un x ${formatCurrency(itemMancais.preco)}` });
+    }
+
+    // Proteções: 4 unidades, preço fixo (assumido)
+    const itemProtecoes = costs.opcionais.find((o: { nome: string; preco: number }) => o.nome === 'Proteções');
+    const custoProtecoes = itemProtecoes ? itemProtecoes.preco : 0; // Assumindo que o preço é para as 4
+    if (itemProtecoes) {
+      const precoUnitario = custoProtecoes / 4;
+      outrosMateriais.push({ nome: 'Proteções', custo: custoProtecoes, detalhe: `4 un x ${formatCurrency(precoUnitario)}` });
+    }
+
+    // Pés ou Rodízios
+    const nomeApoioBusca = tipoApoio === 'pe' ? 'Pé articulado' : 'Rodízios';
+    const nomeApoioExibicao = tipoApoio === 'pe' ? 'Pé Articulado' : 'Rodízios';
+    const itemApoio = costs.opcionais.find((o: { nome: string; preco: number }) => o.nome.toLowerCase().includes(nomeApoioBusca.toLowerCase()));
+    let custoApoio = 0;
+    if (itemApoio) {
+      const qtd = 4 + Math.floor(comprimentoM / 6) * 2;
+      custoApoio = itemApoio.preco * qtd;
+      outrosMateriais.push({ nome: nomeApoioExibicao, custo: custoApoio, detalhe: `${qtd} un x ${formatCurrency(itemApoio.preco)}` });
+    }
+    
+    // Soma dos custos de "Outros Materiais"
+    const totalOutrosMateriais = custoMancais +
+                           custoProtecoes +
+                           custoApoio +
+                           calcularCustoPorArea('Usinagem suportes') +
+                           calcularCustoPorArea('Usinagem eixos') +
+                           calcularCustoPorArea('Fixações gerais') +
+                           calcularCustoPorArea('Tratamento superficial');
+
+    // --- MATERIAIS OPCIONAIS ---
+    const materiaisOpcionais: { nome: string; detalhe: string; custo: number }[] = [];
+    
+    // Rolete Inferior
+    if (opcionaisSelecionados.roleteInferior) {
+      const itemRolete = costs.opcionais.find((o: { nome: string; preco: number; }) => o.nome === 'Rolete Inferior');
+      if (itemRolete) {
+        const qtd = 1 + Math.floor(Math.max(0, comprimentoM - 2) / 2);
+        const custo = itemRolete.preco * qtd;
+        materiaisOpcionais.push({ nome: 'Rolete Inferior', custo, detalhe: `${qtd} un x ${formatCurrency(itemRolete.preco)}` });
+      }
+    }
+
+    // Pintura
+    if (opcionaisSelecionados.pintura) {
+        const itemPintura = costs.opcionais.find((o: { nome: string; preco: number; }) => o.nome === 'Pintura');
+        if(itemPintura) {
+            let custo = itemPintura.preco;
+            let detalhe = `Valor base até 2m²: ${formatCurrency(custo)}`;
+            if (areaM2 > 2) {
+                const metrosExcedentes = Math.ceil(areaM2 - 2);
+                const acrescimo = itemPintura.preco * 0.20 * metrosExcedentes;
+                custo += acrescimo;
+                detalhe += ` + ${formatCurrency(acrescimo)} (${metrosExcedentes}m² excedente(s))`;
+            }
+            materiaisOpcionais.push({ nome: 'Pintura', custo, detalhe });
+        }
+    }
+
+    const totalMateriaisOpcionais = materiaisOpcionais.reduce((acc, item) => acc + item.custo, 0);
+
+    // --- TOTAL GERAL ---
+    const subtotal = custoCorreia + custoChapa + custoEstrutura + custoMotor + custoProjeto + custoMontagem + totalOutrosMateriais + totalMateriaisOpcionais;
 
     return {
       custoCorreia,
       custoChapa,
       custoEstrutura,
       custoMotor,
-      custoOpcionais,
       custoProjeto,
       custoMontagem,
+      outrosMateriais,
+      totalOutrosMateriais,
+      materiaisOpcionais,
+      totalMateriaisOpcionais,
       subtotal,
     };
   };
 
-  const totais = calcularTotal();
+  const totais = calcularCustosDetalhados();
 
   const handleSalvarOrcamento = async () => {
     try {
@@ -129,6 +227,8 @@ const OrcamentoResultado: React.FC<Props> = ({ orcamento }) => {
   return (
     <ResultadoContainer>
       <Titulo>Resumo do Orçamento</Titulo>
+      
+      {/* Custos Básicos */}
       <ItemLista>
         <span>Custo da Correia</span>
         <span>{formatCurrency(totais.custoCorreia)}</span>
@@ -145,10 +245,31 @@ const OrcamentoResultado: React.FC<Props> = ({ orcamento }) => {
         <span>Custo do Motor</span>
         <span>{formatCurrency(totais.custoMotor)}</span>
       </ItemLista>
-      <ItemLista>
-        <span>Custos Opcionais</span>
-        <span>{formatCurrency(totais.custoOpcionais)}</span>
-      </ItemLista>
+
+      {/* Outros Materiais */}
+      <Titulo style={{ marginTop: '2rem' }}>Outros Materiais</Titulo>
+      {totais.outrosMateriais.map((item, index) => (
+        <ItemLista key={index}>
+          <span>{item.nome} <small>({item.detalhe})</small></span>
+          <span>{formatCurrency(item.custo)}</span>
+        </ItemLista>
+      ))}
+
+      {/* Materiais Opcionais */}
+      {totais.materiaisOpcionais.length > 0 && (
+        <>
+          <Titulo style={{ marginTop: '2rem' }}>Materiais Opcionais</Titulo>
+          {totais.materiaisOpcionais.map((item, index) => (
+            <ItemLista key={index}>
+              <span>{item.nome} <small>({item.detalhe})</small></span>
+              <span>{formatCurrency(item.custo)}</span>
+            </ItemLista>
+          ))}
+        </>
+      )}
+
+      {/* Custos de Serviço */}
+      <Titulo style={{ marginTop: '2rem' }}>Serviços</Titulo>
       <ItemLista>
         <span>Custo do Projeto</span>
         <span>{formatCurrency(totais.custoProjeto)}</span>
@@ -157,6 +278,8 @@ const OrcamentoResultado: React.FC<Props> = ({ orcamento }) => {
         <span>Custo da Montagem</span>
         <span>{formatCurrency(totais.custoMontagem)}</span>
       </ItemLista>
+
+      {/* Total */}
       <Total>
         <span>TOTAL</span>
         <span>{formatCurrency(totais.subtotal)}</span>

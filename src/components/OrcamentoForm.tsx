@@ -1,11 +1,14 @@
 import React from 'react';
 import styled from 'styled-components';
-import { Orcamento } from '../types';
-import { costs } from '../data/costs';
+import { OrcamentoInput } from '../types';
+import { costs } from '../data/costs'; // Manter para a lista de motores
 
 interface Props {
-  orcamento: Orcamento;
-  setOrcamento: React.Dispatch<React.SetStateAction<Orcamento>>;
+  orcamentoInput: OrcamentoInput;
+  setOrcamentoInput: React.Dispatch<React.SetStateAction<OrcamentoInput>>;
+  perfilEstruturaCalculado: number;
+  horasProjetoCalculadas: number;
+  horasMontagemCalculadas: number;
 }
 
 const FormContainer = styled.div`
@@ -18,6 +21,7 @@ const FormContainer = styled.div`
 const FormGroup = styled.div`
   display: flex;
   flex-direction: column;
+  margin-bottom: 1rem;
 `;
 
 const Label = styled.label`
@@ -41,11 +45,12 @@ const Select = styled.select`
   border-radius: 4px;
 `;
 
-const CheckboxContainer = styled.div`
-  margin-top: 1rem;
-  h3 {
-    margin-bottom: 1rem;
-  }
+const CalculatedValue = styled.div`
+  padding: 0.75rem;
+  background-color: ${({ theme }) => theme.inputBackground};
+  border-radius: 4px;
+  border: 1px solid ${({ theme }) => theme.toggleBorder};
+  color: ${({ theme }) => theme.text};
 `;
 
 const CheckboxLabel = styled.label`
@@ -59,13 +64,19 @@ const CheckboxLabel = styled.label`
   }
 `;
 
-const OrcamentoForm: React.FC<Props> = ({ orcamento, setOrcamento }) => {
+const OrcamentoForm: React.FC<Props> = ({ 
+  orcamentoInput, 
+  setOrcamentoInput, 
+  perfilEstruturaCalculado,
+  horasProjetoCalculadas,
+  horasMontagemCalculadas 
+}) => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    
+
     if (type === 'checkbox') {
       const { checked } = e.target as HTMLInputElement;
-      setOrcamento(prev => ({
+      setOrcamentoInput(prev => ({
         ...prev,
         opcionaisSelecionados: {
           ...prev.opcionaisSelecionados,
@@ -73,9 +84,12 @@ const OrcamentoForm: React.FC<Props> = ({ orcamento, setOrcamento }) => {
         },
       }));
     } else {
-      setOrcamento(prev => ({
+      const parsedValue = type === 'number' ? parseFloat(value) || 0 : value;
+      let finalValue: string | number = parsedValue;
+
+      setOrcamentoInput(prev => ({
         ...prev,
-        [name]: type === 'number' ? parseFloat(value) || 0 : value,
+        [name]: parsedValue,
       }));
     }
   };
@@ -86,23 +100,23 @@ const OrcamentoForm: React.FC<Props> = ({ orcamento, setOrcamento }) => {
         <h3>Dimensões e Estrutura</h3>
         <FormGroup>
           <Label htmlFor="largura">Largura (mm)</Label>
-          <Input type="number" id="largura" name="largura" value={orcamento.largura} onChange={handleChange} />
+          <Input type="number" id="largura" name="largura" value={orcamentoInput.largura} onChange={handleChange} />
         </FormGroup>
         <FormGroup>
           <Label htmlFor="comprimento">Comprimento (mm)</Label>
-          <Input type="number" id="comprimento" name="comprimento" value={orcamento.comprimento} onChange={handleChange} />
+          <Input type="number" id="comprimento" name="comprimento" value={orcamentoInput.comprimento} onChange={handleChange} />
         </FormGroup>
         <FormGroup>
           <Label htmlFor="diametroCorreia">Diâmetro da Correia (mm)</Label>
-          <Input type="number" id="diametroCorreia" name="diametroCorreia" value={orcamento.diametroCorreia} onChange={handleChange} />
+          <Input type="number" id="diametroCorreia" name="diametroCorreia" value={orcamentoInput.diametroCorreia} onChange={handleChange} />
         </FormGroup>
         <FormGroup>
-          <Label htmlFor="perfilEstrutura">Perfil para Estrutura (m)</Label>
-          <Input type="number" id="perfilEstrutura" name="perfilEstrutura" value={orcamento.perfilEstrutura} onChange={handleChange} />
+          <Label>Perfil para Estrutura (m)</Label>
+          <CalculatedValue>{perfilEstruturaCalculado.toFixed(2)}</CalculatedValue>
         </FormGroup>
         <FormGroup>
           <Label htmlFor="motorId">Motor</Label>
-          <Select id="motorId" name="motorId" value={orcamento.motorId} onChange={handleChange}>
+          <Select id="motorId" name="motorId" value={orcamentoInput.motorId} onChange={handleChange}>
             {costs.motores.map(motor => (
               <option key={motor.id} value={motor.id}>{motor.nome}</option>
             ))}
@@ -111,31 +125,45 @@ const OrcamentoForm: React.FC<Props> = ({ orcamento, setOrcamento }) => {
       </div>
       
       <div>
-        <h3>Horas</h3>
+        <h3>Outros Materiais e Opcionais</h3>
         <FormGroup>
-          <Label htmlFor="horasProjeto">Horas de Projeto</Label>
-          <Input type="number" id="horasProjeto" name="horasProjeto" value={orcamento.horasProjeto} onChange={handleChange} />
+          <Label htmlFor="tipoApoio">Tipo de Apoio</Label>
+          <Select id="tipoApoio" name="tipoApoio" value={orcamentoInput.tipoApoio} onChange={handleChange}>
+            <option value="pe">Pé Articulado</option>
+            <option value="rodizio">Rodízios</option>
+          </Select>
         </FormGroup>
-        <FormGroup>
-          <Label htmlFor="horasMontagem">Horas de Montagem</Label>
-          <Input type="number" id="horasMontagem" name="horasMontagem" value={orcamento.horasMontagem} onChange={handleChange} />
-        </FormGroup>
+        <CheckboxLabel>
+          <input
+            type="checkbox"
+            name="roleteInferior"
+            checked={!!orcamentoInput.opcionaisSelecionados.roleteInferior}
+            onChange={handleChange}
+          />
+          Rolete Inferior
+        </CheckboxLabel>
+        <CheckboxLabel>
+          <input
+            type="checkbox"
+            name="pintura"
+            checked={!!orcamentoInput.opcionaisSelecionados.pintura}
+            onChange={handleChange}
+          />
+          Pintura
+        </CheckboxLabel>
       </div>
 
-      <CheckboxContainer>
-        <h3>Materiais Opcionais</h3>
-        {costs.opcionais.map(opcional => (
-          <CheckboxLabel key={opcional.id}>
-            <input
-              type="checkbox"
-              name={opcional.id}
-              checked={!!orcamento.opcionaisSelecionados[opcional.id]}
-              onChange={handleChange}
-            />
-            {opcional.nome}
-          </CheckboxLabel>
-        ))}
-      </CheckboxContainer>
+      <div>
+        <h3>Horas (Calculado Automaticamente)</h3>
+        <FormGroup>
+          <Label>Horas de Projeto</Label>
+          <CalculatedValue>{horasProjetoCalculadas.toFixed(2)}</CalculatedValue>
+        </FormGroup>
+        <FormGroup>
+          <Label>Horas de Montagem</Label>
+          <CalculatedValue>{horasMontagemCalculadas.toFixed(2)}</CalculatedValue>
+        </FormGroup>
+      </div>
     </FormContainer>
   );
 };
